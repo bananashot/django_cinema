@@ -3,10 +3,12 @@ from datetime import date, timedelta
 from django.contrib.auth import get_user_model, logout
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.views import LoginView, LogoutView
-from django.views.generic import CreateView, ListView
+from django.utils.timezone import now
+from django.views.generic import CreateView, ListView, UpdateView
 
-from cinema_app.forms import SignUpForm, CreateHallForm, CreateSessionForm
-from cinema_app.models import CinemaUser, Session, Hall
+from cinema_app.forms import SignUpForm, HallForm, CreateSessionForm
+from cinema_app.models import CinemaUser, Session, Hall, Ticket
+from cinema_app.schedule_settings import EDITING_HOURS_UNTIL_SESSION
 
 User = get_user_model()
 
@@ -43,7 +45,7 @@ class ProductList(ListView):
 
 class CreateHallView(CreateView):
     model = Hall
-    form_class = CreateHallForm
+    form_class = HallForm
     template_name = 'create_form.html'
     success_url = '/admin_tools/'
 
@@ -51,10 +53,23 @@ class CreateHallView(CreateView):
 class AvailableToEditHallView(ListView):
     model = Hall
     template_name = 'halls_to_edit.html'
+    queryset = Hall.objects.all()
     paginate_by = 10
 
     def get_queryset(self):
-        halls_in_use = Ticket
+        halls_in_use = Ticket.objects.filter(
+            ticket_for_session__start_datetime__gt=now() + timedelta(hours=EDITING_HOURS_UNTIL_SESSION)).values_list(
+            'ticket_for_session__hall__id')
+        halls_to_render = Hall.objects.exclude(id__in=halls_in_use)
+
+        return halls_to_render
+
+
+class EditHallView(UpdateView):
+    model = Hall
+    form_class = HallForm
+    template_name = 'create_form.html'
+    success_url = '/admin_tools/halls_list/'
 
 
 class CreateSessionView(CreateView):
@@ -74,5 +89,5 @@ class ScheduleTodayView(ListView):
 class ScheduleTomorrowView(ListView):
     model = Session
     template_name = 'sessions_tomorrow.html'
-    queryset = Session.objects.filter(start_datetime__contains=date.today()+timedelta(days=1))
+    queryset = Session.objects.filter(start_datetime__contains=date.today() + timedelta(days=1))
     paginate_by = 10

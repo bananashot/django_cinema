@@ -24,7 +24,7 @@ class SignUpForm(UserCreationForm):
         fields = ('username', 'first_name', 'last_name', 'email', 'password1', 'password2')
 
 
-class CreateHallForm(ModelForm):
+class HallForm(ModelForm):
     class Meta:
         model = Hall
         fields = '__all__'
