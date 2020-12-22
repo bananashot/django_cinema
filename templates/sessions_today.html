@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    {% load custom_tags %}
+
+    <br>
+    <br>
+    <br>
+    <br>
+
+    <div class="d-flex justify-content-center">
+        <b>Today - {% now 'd\/m' %}</b>
+    </div>
+
+    <br>
+    <br>
+
+    <table class="table">
+        <thead>
+        <tr>
+            <th scope="col">Film</th>
+            <th scope="col">Time</th>
+            <th scope="col">Price</th>
+            <th scope="col">Tickets</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for object in page_obj %}
+            <tr>
+                <td>{{ object.film.film_name }}</td>
+                <td>{{ object.start_datetime.time|time:'H:i' }}</td>
+                <td>${{ object.session_price }}</td>
+                <td> {{ object.purchased_tickets }}/{{ object.hall.hall_capacity }}</td>
+            </tr>
+        {% endfor %}
+
+        </tbody>
+    </table>
+
+{% endblock %}
