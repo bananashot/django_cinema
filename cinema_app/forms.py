@@ -3,9 +3,10 @@ from datetime import date, timedelta, datetime
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.core.exceptions import ValidationError
+from django.db.models import F
 from django.forms import ModelForm, SelectDateWidget, TimeInput
 
-from cinema_app.models import CinemaUser, Hall, Session
+from cinema_app.models import CinemaUser, Hall, Session, Ticket
 
 
 class SignUpForm(UserCreationForm):
@@ -88,3 +89,27 @@ class CreateSessionForm(ModelForm):
             ...
 
         return cleaned_data
+
+
+class TicketPurchaseForm(ModelForm):
+    ordered_seats = forms.IntegerField(label='', initial='1')
+
+    class Meta:
+        model = Ticket
+        fields = ['ordered_seats', ]
+
+    def clean_ordered_seats(self):
+        field_value = self.cleaned_data['ordered_seats']
+        session_id = self.data['id_value']
+
+        session_object = Session.objects.get(id=session_id)
+        allowed_tickets = getattr(Hall.objects.get(id=session_object.hall_id),
+                                  'hall_capacity') - session_object.purchased_tickets
+
+        if field_value < 1:
+            raise ValidationError('You need to order at least 1 ticket')
+
+        if field_value > allowed_tickets:
+            raise ValidationError('You can order only at least {} tickets'.format(allowed_tickets))
+
+        return field_value

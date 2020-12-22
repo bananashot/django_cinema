@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    {% load mathfilters %}
+
+    <br>
+    <br>
+    <br>
+    <br>
+
+    <table class="table">
+        <thead>
+        <tr>
+            <th scope="col">Film</th>
+            <th scope="col">Time</th>
+            <th scope="col">Ordered seats</th>
+            <th scope="col">Total price</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for object in page_obj %}
+            <tr>
+                <td>{{ object.ticket_for_session.film.film_name }}</td>
+                <td>{{ object.ticket_for_session.start_datetime }}</td>
+                <td>{{ object.ordered_seats }}</td>
+                {% with tickets=object.ordered_seats price_per_ticket=object.ticket_for_session.session_price %}
+                    <td> ${{ tickets|mul:price_per_ticket }}</td>
+                {% endwith %}
+            </tr>
+        {% endfor %}
+
+        </tbody>
+    </table>
+
+    <b>Total - ${{ total_amount }}</b>
+
+
+{% endblock %}

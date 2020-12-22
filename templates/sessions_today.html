@@ -22,6 +22,9 @@
             <th scope="col">Time</th>
             <th scope="col">Price</th>
             <th scope="col">Tickets</th>
+            {% if request.user.is_authenticated %}
+                <th scope="col">Order</th>
+            {% endif %}
         </tr>
         </thead>
         <tbody>
@@ -31,6 +34,17 @@
                 <td>{{ object.start_datetime.time|time:'H:i' }}</td>
                 <td>${{ object.session_price }}</td>
                 <td> {{ object.purchased_tickets }}/{{ object.hall.hall_capacity }}</td>
+
+                {% if request.user.is_authenticated %}
+                    <td>
+                        <form method="post" action="{% url 'order_ticket' %}">
+                            {% csrf_token %}
+                            {{ form.as_p }}
+                            <button class="btn btn-primary" type="submit">Purchase</button>
+                            <input type="hidden" name="id_value" value="{{ object.id }}">
+                        </form>
+                    </td>
+                {% endif %}
             </tr>
         {% endfor %}
 

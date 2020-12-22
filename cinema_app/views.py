@@ -3,10 +3,11 @@ from datetime import date, timedelta
 from django.contrib.auth import get_user_model, logout
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.views import LoginView, LogoutView
+from django.db.models import ExpressionWrapper, Sum, DecimalField, F
 from django.utils.timezone import now
 from django.views.generic import CreateView, ListView, UpdateView
 
-from cinema_app.forms import SignUpForm, HallForm, CreateSessionForm
+from cinema_app.forms import SignUpForm, HallForm, CreateSessionForm, TicketPurchaseForm
 from cinema_app.models import CinemaUser, Session, Hall, Ticket
 from cinema_app.schedule_settings import EDITING_HOURS_UNTIL_SESSION
 
@@ -85,9 +86,47 @@ class ScheduleTodayView(ListView):
     queryset = Session.objects.filter(start_datetime__contains=date.today())
     paginate_by = 10
 
+    def get_context_data(self, *, object_list=None, **kwargs):
+        context = super().get_context_data(object_list=object_list, **kwargs)
+        context.update({'form': TicketPurchaseForm})
+        return context
+
 
 class ScheduleTomorrowView(ListView):
     model = Session
     template_name = 'sessions_tomorrow.html'
     queryset = Session.objects.filter(start_datetime__contains=date.today() + timedelta(days=1))
     paginate_by = 10
+
+    def get_context_data(self, *, object_list=None, **kwargs):
+        context = super().get_context_data(object_list=object_list, **kwargs)
+        context.update({'form': TicketPurchaseForm})
+        return context
+
+
+class OrderTicketView(CreateView):
+    model = Ticket
+    form_class = TicketPurchaseForm
+    template_name = 'sessions_today.html'
+    success_url = '/order_history/'
+
+
+class PurchasedTicketsListView(ListView):
+    model = Ticket
+    template_name = 'purchased_ticket_list.html'
+    queryset = Ticket.objects.all()
+    paginate_by = 10
+
+    def get_queryset(self):
+        return Ticket.objects.filter(buyer=self.request.user)
+
+    def get_context_data(self, *, object_list=None, **kwargs):
+        context = super().get_context_data(object_list=object_list, **kwargs)
+
+        total_amount = self.queryset.values('ticket_for_session__session_price', 'ordered_seats').aggregate(
+            total_sum=Sum(ExpressionWrapper(F('ticket_for_session__session_price') * F('ordered_seats'),
+                                            output_field=DecimalField())))
+
+        context['total_amount'] = total_amount['total_sum']
+
+        return context

@@ -80,4 +80,3 @@ class Ticket(models.Model):
 
     def __str__(self):
         return '%s - %s' % (self.ticket_for_session.film.film_name, self.ticket_for_session.start_datetime)
-
