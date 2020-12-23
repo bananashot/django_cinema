@@ -11,7 +11,7 @@ from django.views.generic import CreateView, ListView, UpdateView
 
 from cinema_app.forms import SignUpForm, HallForm, CreateSessionForm, TicketPurchaseForm
 from cinema_app.models import CinemaUser, Session, Hall, Ticket
-from cinema_app.schedule_settings import EDITING_HOURS_UNTIL_SESSION
+from cinema_app.schedule_settings import EDITING_HOURS_UNTIL_SESSION, SCHEDULE_SORTING_METHODS
 
 User = get_user_model()
 
@@ -121,7 +121,28 @@ class CreateSessionView(CreateView):
     success_url = '/admin_tools/'
 
 
-class ScheduleTodayView(ListView):
+class ScheduleSortingMixin:
+
+    @staticmethod
+    def schedule_sorting(query_to_sort, obj_request, sort_key, sorting_methods):
+        if obj_request.GET.get(sort_key) in sorting_methods:
+
+            if obj_request.GET[sort_key] == sorting_methods[0]:
+                return query_to_sort.order_by('start_datetime')
+
+            if obj_request.GET[sort_key] == sorting_methods[1]:
+                return query_to_sort.order_by('-start_datetime')
+
+            if obj_request.GET[sort_key] == sorting_methods[2]:
+                return query_to_sort.order_by('session_price')
+
+            if obj_request.GET[sort_key] == sorting_methods[3]:
+                return query_to_sort.order_by('-session_price')
+
+            return 0
+
+
+class ScheduleTodayView(ListView, ScheduleSortingMixin):
     model = Session
     template_name = 'sessions_today.html'
     queryset = Session.objects.filter(start_datetime__contains=date.today())
@@ -129,11 +150,20 @@ class ScheduleTodayView(ListView):
 
     def get_context_data(self, *, object_list=None, **kwargs):
         context = super().get_context_data(object_list=object_list, **kwargs)
+        context['sort_methods'] = SCHEDULE_SORTING_METHODS
         context.update({'form': TicketPurchaseForm})
         return context
 
+    def get_queryset(self):
+        sorting_result = self.schedule_sorting(self.queryset, self.request, 'sort', SCHEDULE_SORTING_METHODS)
 
-class ScheduleTomorrowView(ListView):
+        if sorting_result:
+            return sorting_result
+
+        return super().get_queryset()
+
+
+class ScheduleTomorrowView(ListView, ScheduleSortingMixin):
     model = Session
     template_name = 'sessions_tomorrow.html'
     queryset = Session.objects.filter(start_datetime__contains=date.today() + timedelta(days=1))
@@ -141,8 +171,17 @@ class ScheduleTomorrowView(ListView):
 
     def get_context_data(self, *, object_list=None, **kwargs):
         context = super().get_context_data(object_list=object_list, **kwargs)
+        context['sort_methods'] = SCHEDULE_SORTING_METHODS
         context.update({'form': TicketPurchaseForm})
         return context
+
+    def get_queryset(self):
+        sorting_result = self.schedule_sorting(self.queryset, self.request, 'sort', SCHEDULE_SORTING_METHODS)
+
+        if sorting_result:
+            return sorting_result
+
+        return super().get_queryset()
 
 
 class OrderTicketView(CreateView):
