@@ -6,7 +6,7 @@ from rest_framework.routers import DefaultRouter
 from cinema_app.API import resources
 from cinema_app.views import ProductList, Login, Logout, Registration, CreateHallView, CreateSessionView, \
     ScheduleTodayView, ScheduleTomorrowView, AvailableToEditHallView, EditHallView, PurchasedTicketsListView, \
-    OrderTicketView, AdminToolsView
+    OrderTicketView, AdminToolsView, SessionListWithoutTicketsView
 
 router = DefaultRouter()
 router.register(r'users', resources.UserViewSet)
@@ -25,6 +25,7 @@ urlpatterns = [
     path('admin_tools/create_session/', CreateSessionView.as_view(), name='create_session'),
     path('admin_tools/halls_list/', AvailableToEditHallView.as_view(), name='hall_list'),
     path('admin_tools/halls_list/edit/<int:pk>/', EditHallView.as_view(), name='edit_hall'),
+    path('admin_tools/session_list/', SessionListWithoutTicketsView.as_view(), name='session_list'),
     path('schedule_today/', ScheduleTodayView.as_view(), name='schedule_today'),
     path('schedule_tomorrow/', ScheduleTomorrowView.as_view(), name='schedule_tomorrow'),
     path('order_ticket/', OrderTicketView.as_view(), name='order_ticket'),

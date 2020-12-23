@@ -24,7 +24,7 @@
         </form>
     </div>
     <div class="d-flex justify-content-center">
-{#        <form method="get" action="{% url 'edit_session' %}">#}
+        <form method="get" action="{% url 'session_list' %}">
             {% csrf_token %}
             <input type="submit" value="Edit available sessions"/>
         </form>

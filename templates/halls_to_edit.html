@@ -7,40 +7,42 @@
     <br>
     <br>
 
-    <table class="table">
-        <thead>
-        <tr>
-            <th scope="col">Hall name</th>
-            <th scope="col">Capacity</th>
-            {% if request.user.is_superuser %}
-                <th scope="col">Actions</th>
-            {% endif %}
-        </tr>
-        </thead>
-        <tbody>
-        {% for object in page_obj %}
+    {% if page_obj %}
+
+        <table class="table">
+            <thead>
             <tr>
-                <td>{{ object.hall_color }}</td>
-                <td>{{ object.hall_capacity }}</td>
+                <th scope="col">Hall name</th>
+                <th scope="col">Capacity</th>
                 {% if request.user.is_superuser %}
-                    <td>
+                    <th scope="col">Actions</th>
+                {% endif %}
+            </tr>
+            </thead>
+            <tbody>
+            {% for object in page_obj %}
+                <tr>
+                    <td>{{ object.hall_color }}</td>
+                    <td>{{ object.hall_capacity }}</td>
+                    {% if request.user.is_superuser %}
+                        <td>
                         <span>
                             <form method="get" action="{% url 'edit_hall' pk=object.pk %}">
                                 {% csrf_token %}
                                 <button class="btn btn-primary" type="submit">Edit</button>
                             </form>
                         </span>
-                    </td>
-                {% endif %}
-            </tr>
-        {% endfor %}
+                        </td>
+                    {% endif %}
+                </tr>
+            {% endfor %}
 
-        </tbody>
-    </table>
+            </tbody>
+        </table>
 
-    <br>
+        <br>
 
-    <div class="pagination">
+        <div class="pagination">
     <span class="step-links">
         {% if page_obj.has_previous %}
             <a href="?page=1">&laquo; first</a>
@@ -56,6 +58,14 @@
             <a href="?page={{ page_obj.paginator.num_pages }}">last &raquo;</a>
         {% endif %}
     </span>
-    </div>
+        </div>
+
+    {% else %}
+        <div class="d-flex justify-content-center">
+            <div class="badge badge-danger text-wrap" style="width: 20rem; height: 2rem">
+                <h6>Nothing to edit here</h6>
+            </div>
+        </div>
+    {% endif %}
 
 {% endblock %}

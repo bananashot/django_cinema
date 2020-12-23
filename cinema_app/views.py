@@ -11,7 +11,7 @@ from django.views.generic import CreateView, ListView, UpdateView, TemplateView
 
 from cinema_app.forms import SignUpForm, HallForm, CreateSessionForm, TicketPurchaseForm
 from cinema_app.models import CinemaUser, Session, Hall, Ticket
-from cinema_app.schedule_settings import EDITING_HOURS_UNTIL_SESSION, SCHEDULE_SORTING_METHODS
+from cinema_app.schedule_settings import SCHEDULE_SORTING_METHODS, ALLOWED_DAYS_BEFORE_EDITING
 
 User = get_user_model()
 
@@ -60,7 +60,8 @@ class AvailableToEditHallView(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         halls_in_use = Ticket.objects.filter(
-            ticket_for_session__start_datetime__gt=now() + timedelta(hours=EDITING_HOURS_UNTIL_SESSION)).values_list(
+            ticket_for_session__start_datetime__gt=now() - timedelta(
+                days=ALLOWED_DAYS_BEFORE_EDITING)).values_list(
             'ticket_for_session__hall__id')
         halls_to_render = Hall.objects.exclude(id__in=halls_in_use)
 
@@ -87,7 +88,8 @@ class EditHallView(LoginRequiredMixin, UpdateView):
         hall_form = form.save(commit=False)
 
         halls_in_use = Ticket.objects.filter(
-            ticket_for_session__start_datetime__gt=now() + timedelta(hours=EDITING_HOURS_UNTIL_SESSION)).values_list(
+            ticket_for_session__start_datetime__gt=now() - timedelta(
+                days=ALLOWED_DAYS_BEFORE_EDITING)).values_list(
             'ticket_for_session__hall__id', flat=True)
 
         if hall_form.id in halls_in_use:
@@ -123,8 +125,13 @@ class CreateSessionView(LoginRequiredMixin, CreateView):
 class SessionListWithoutTicketsView(LoginRequiredMixin, ListView):
     model = Session
     template_name = 'no_tickets_session.html'
-    queryset = [obj for obj in Session.objects.all() if obj.purchased_tickets]
     paginate_by = 10
+
+    def get_queryset(self):
+        queryset = Session.objects.filter(start_datetime__gt=now() + timedelta(days=ALLOWED_DAYS_BEFORE_EDITING))
+        sessions_without_tickets = [obj for obj in queryset if not obj.purchased_tickets]
+
+        return sessions_without_tickets
 
 
 class ScheduleSortingMixin:
@@ -169,7 +176,8 @@ class ScheduleTodayView(ListView, ScheduleSortingMixin):
 class ScheduleTomorrowView(ListView, ScheduleSortingMixin):
     model = Session
     template_name = 'sessions_tomorrow.html'
-    queryset = Session.objects.filter(start_datetime__contains=date.today() + timedelta(days=1))
+    queryset = Session.objects.filter(
+        start_datetime__contains=date.today() + timedelta(days=ALLOWED_DAYS_BEFORE_EDITING))
     paginate_by = 10
 
     def get_context_data(self, *, object_list=None, **kwargs):
