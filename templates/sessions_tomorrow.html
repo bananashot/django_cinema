@@ -6,14 +6,28 @@
     <br>
     <br>
     <br>
-    <br>
 
     <div class="d-flex justify-content-center">
         <b>Tomorrow - {{ 1|add_days|date:'d\/m' }} </b>
     </div>
 
     <br>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div>
+                <div class="badge badge-danger text-wrap" style="width: 20rem; height: 2rem">
+                    <h6>{{ message }}</h6>
+                </div>
+            </div>
+        {% endfor %}
+    {% endif %}
+
     <br>
+
+    <div class="d-flex justify-content-end">
+        <pre><span>Sort: <a href="?sort=price">Price</a> | <a href="?sort=time">Time</a>   </span></pre>
+    </div>
 
     <table class="table">
         <thead>
@@ -22,6 +36,9 @@
             <th scope="col">Time</th>
             <th scope="col">Price</th>
             <th scope="col">Tickets</th>
+            {% if request.user.is_authenticated %}
+                <th scope="col">Order</th>
+            {% endif %}
         </tr>
         </thead>
         <tbody>
@@ -31,6 +48,20 @@
                 <td>{{ object.start_datetime.time|time:'H:i' }}</td>
                 <td>${{ object.session_price }}</td>
                 <td> {{ object.purchased_tickets }}/{{ object.hall.hall_capacity }}</td>
+                {% if object.purchased_tickets != object.hall.hall_capacity %}
+                    {% if request.user.is_authenticated %}
+                        <td>
+                            <form method="get" action="{% url 'order_ticket' %}">
+                                <button class="btn btn-primary" type="submit">Purchase</button>
+                                <input type="hidden" name="session" value="{{ object.id }}">
+                            </form>
+                        </td>
+                    {% endif %}
+                {% else %}
+                    <td>
+                        No seats
+                    </td>
+                {% endif %}
             </tr>
         {% endfor %}
 

@@ -6,14 +6,28 @@
     <br>
     <br>
     <br>
-    <br>
 
     <div class="d-flex justify-content-center">
         <b>Today - {% now 'd\/m' %}</b>
     </div>
 
     <br>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div>
+                <div class="badge badge-danger text-wrap" style="width: 20rem; height: 2rem">
+                    <h6>{{ message }}</h6>
+                </div>
+            </div>
+        {% endfor %}
+    {% endif %}
+
     <br>
+
+    <div class="d-flex justify-content-end">
+        <pre><span>Sort: <a href="?sort=price">Price</a> | <a href="?sort=time">Time</a>   </span></pre>
+    </div>
 
     <table class="table">
         <thead>

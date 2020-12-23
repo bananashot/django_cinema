@@ -175,8 +175,19 @@ class OrderTicketView(CreateView):
 
         session_id = int(self.request.GET['session'])
         session_object = Session.objects.get(id=session_id)
+        hall_object = Hall.objects.get(id=session_object.hall_id)
         allowed_tickets = getattr(Hall.objects.get(id=session_object.hall_id),
                                   'hall_capacity') - session_object.purchased_tickets
+
+        if session_object.purchased_tickets == hall_object.hall_capacity:
+
+            msg = 'No seats left for the chosen session'
+            messages.error(self.request, msg)
+
+            if session_object.start_datetime.date() == date.today():
+                return HttpResponseRedirect('/schedule_today/')
+
+            return HttpResponseRedirect('/schedule_tomorrow/')
 
         if order.ordered_seats > allowed_tickets:
             self.request.session['old_value'] = order.ordered_seats
