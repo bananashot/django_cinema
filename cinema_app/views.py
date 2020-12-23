@@ -255,11 +255,11 @@ class OrderTicketView(LoginRequiredMixin, CreateView):
 class PurchasedTicketsListView(LoginRequiredMixin, ListView):
     model = Ticket
     template_name = 'purchased_ticket_list.html'
-    queryset = Ticket.objects.all()
+    queryset = Ticket.objects.all().order_by('-ticket_for_session__start_datetime')
     paginate_by = 10
 
     def get_queryset(self):
-        return Ticket.objects.filter(buyer=self.request.user)
+        return self.queryset.filter(buyer=self.request.user)
 
     def get_context_data(self, *, object_list=None, **kwargs):
         context = super().get_context_data(object_list=object_list, **kwargs)
