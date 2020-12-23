@@ -48,7 +48,6 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    # 'cinema_app.middlewares.NoLogoutForAdminSession',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -125,6 +124,7 @@ USE_TZ = True
 STATIC_URL = '/static/'
 
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+ADMIN_SESSION_COOKIE_AGE = 60 * 60 * 24
 SESSION_COOKIE_AGE = 5
 SESSION_SAVE_EVERY_REQUEST = True
 

@@ -4,6 +4,7 @@ from django.dispatch import receiver
 from rest_framework.authtoken.models import Token
 
 from cinema import settings
+from cinema.settings import ADMIN_SESSION_COOKIE_AGE
 
 
 @receiver(post_save, sender=settings.AUTH_USER_MODEL)
@@ -15,4 +16,4 @@ def create_auth_token(sender, instance=None, created=False, **kwargs):
 @receiver(user_logged_in)
 def admin_unlimited_session(sender, user, request, **kwargs):
     if user.is_superuser:
-        request.session.set_expiry(0)
+        request.session.set_expiry(ADMIN_SESSION_COOKIE_AGE)
