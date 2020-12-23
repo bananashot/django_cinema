@@ -12,7 +12,6 @@ from django.views.generic import CreateView, ListView, UpdateView
 from cinema_app.forms import SignUpForm, HallForm, CreateSessionForm, TicketPurchaseForm
 from cinema_app.models import CinemaUser, Session, Hall, Ticket
 from cinema_app.schedule_settings import EDITING_HOURS_UNTIL_SESSION, SCHEDULE_SORTING_METHODS
-from cinema_app.signals import admin_unlimited_session
 
 User = get_user_model()
 
