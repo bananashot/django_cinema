@@ -11,8 +11,8 @@ def create_auth_token(sender, instance=None, created=False, **kwargs):
     if created:
         Token.objects.create(user=instance)
 
-#
-# @receiver(user_logged_in)
-# def admin_unlimited_session(sender, user, request, **kwargs):
-#     if user.is_superuser:
-#         request.session.set_expiry(0)
+
+@receiver(user_logged_in)
+def admin_unlimited_session(sender, user, request, **kwargs):
+    if user.is_superuser:
+        request.session.set_expiry(0)
