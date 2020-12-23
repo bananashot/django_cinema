@@ -1,13 +1,13 @@
 from datetime import date, timedelta
 
 from django.contrib import messages
-from django.contrib.auth import get_user_model, logout, user_logged_in
+from django.contrib.auth import get_user_model, logout
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.views import LoginView, LogoutView
 from django.db.models import ExpressionWrapper, Sum, DecimalField, F
 from django.http import HttpResponseRedirect
 from django.utils.timezone import now
-from django.views.generic import CreateView, ListView, UpdateView
+from django.views.generic import CreateView, ListView, UpdateView, TemplateView
 
 from cinema_app.forms import SignUpForm, HallForm, CreateSessionForm, TicketPurchaseForm
 from cinema_app.models import CinemaUser, Session, Hall, Ticket
@@ -41,14 +41,18 @@ class ProductList(ListView):
     queryset = Session.objects.all()
 
 
-class CreateHallView(CreateView):
+class AdminToolsView(LoginRequiredMixin, TemplateView):
+    template_name = 'admin_tools.html'
+
+
+class CreateHallView(LoginRequiredMixin, CreateView):
     model = Hall
     form_class = HallForm
     template_name = 'create_form.html'
     success_url = '/admin_tools/'
 
 
-class AvailableToEditHallView(ListView):
+class AvailableToEditHallView(LoginRequiredMixin, ListView):
     model = Hall
     template_name = 'halls_to_edit.html'
     queryset = Hall.objects.all()
@@ -63,7 +67,7 @@ class AvailableToEditHallView(ListView):
         return halls_to_render
 
 
-class EditHallView(UpdateView):
+class EditHallView(LoginRequiredMixin, UpdateView):
     model = Hall
     form_class = HallForm
     template_name = 'create_form.html'
@@ -109,11 +113,18 @@ class EditHallView(UpdateView):
         return super().form_valid(form)
 
 
-class CreateSessionView(CreateView):
+class CreateSessionView(LoginRequiredMixin, CreateView):
     model = Session
     form_class = CreateSessionForm
     template_name = 'create_form.html'
     success_url = '/admin_tools/'
+
+
+class SessionListWithoutTicketsView(LoginRequiredMixin, ListView):
+    model = Session
+    template_name = 'no_tickets_session.html'
+    queryset = [obj for obj in Session.objects.all() if obj.purchased_tickets]
+    paginate_by = 10
 
 
 class ScheduleSortingMixin:
@@ -123,18 +134,18 @@ class ScheduleSortingMixin:
         if obj_request.GET.get(sort_key) in sorting_methods:
 
             if obj_request.GET[sort_key] == sorting_methods[0]:
-                return query_to_sort.order_by('start_datetime')
+                return query_to_sort.order_by('start_datetime', 'session_price')
 
             if obj_request.GET[sort_key] == sorting_methods[1]:
-                return query_to_sort.order_by('-start_datetime')
+                return query_to_sort.order_by('-start_datetime', 'session_price')
 
             if obj_request.GET[sort_key] == sorting_methods[2]:
-                return query_to_sort.order_by('session_price')
+                return query_to_sort.order_by('session_price', 'start_datetime')
 
             if obj_request.GET[sort_key] == sorting_methods[3]:
-                return query_to_sort.order_by('-session_price')
+                return query_to_sort.order_by('-session_price', 'start_datetime')
 
-            return 0
+            return query_to_sort
 
 
 class ScheduleTodayView(ListView, ScheduleSortingMixin):
@@ -152,10 +163,7 @@ class ScheduleTodayView(ListView, ScheduleSortingMixin):
     def get_queryset(self):
         sorting_result = self.schedule_sorting(self.queryset, self.request, 'sort', SCHEDULE_SORTING_METHODS)
 
-        if sorting_result:
-            return sorting_result
-
-        return super().get_queryset()
+        return sorting_result
 
 
 class ScheduleTomorrowView(ListView, ScheduleSortingMixin):
@@ -173,13 +181,10 @@ class ScheduleTomorrowView(ListView, ScheduleSortingMixin):
     def get_queryset(self):
         sorting_result = self.schedule_sorting(self.queryset, self.request, 'sort', SCHEDULE_SORTING_METHODS)
 
-        if sorting_result:
-            return sorting_result
-
-        return super().get_queryset()
+        return sorting_result
 
 
-class OrderTicketView(CreateView):
+class OrderTicketView(LoginRequiredMixin, CreateView):
     model = Ticket
     form_class = TicketPurchaseForm
     template_name = 'order_ticket.html'
@@ -239,7 +244,7 @@ class OrderTicketView(CreateView):
         return super().form_valid(form)
 
 
-class PurchasedTicketsListView(ListView):
+class PurchasedTicketsListView(LoginRequiredMixin, ListView):
     model = Ticket
     template_name = 'purchased_ticket_list.html'
     queryset = Ticket.objects.all()

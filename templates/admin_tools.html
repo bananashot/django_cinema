@@ -5,22 +5,28 @@
     <br>
     <br>
 
-        <div class="d-flex justify-content-center">
-            <form method="get" action="{% url 'create_hall' %}">
-                {% csrf_token %}
-                <input type="submit" value="Create new hall"/>
-            </form>
-        </div>
-        <div class="d-flex justify-content-center">
-            <form method="get" action="{% url 'create_session' %}">
-                {% csrf_token %}
-                <input type="submit" value="Create new session"/>
-            </form>
-        </div>
-        <div class="d-flex justify-content-center">
-            <form method="get" action="{% url 'hall_list' %}">
-                {% csrf_token %}
-                <input type="submit" value="Edit available halls"/>
-            </form>
-        </div>
+    <div class="d-flex justify-content-center">
+        <form method="get" action="{% url 'create_hall' %}">
+            {% csrf_token %}
+            <input type="submit" value="Create new hall"/>
+        </form>
+    </div>
+    <div class="d-flex justify-content-center">
+        <form method="get" action="{% url 'hall_list' %}">
+            {% csrf_token %}
+            <input type="submit" value="Edit available halls"/>
+        </form>
+    </div>
+    <div class="d-flex justify-content-center">
+        <form method="get" action="{% url 'create_session' %}">
+            {% csrf_token %}
+            <input type="submit" value="Create new session"/>
+        </form>
+    </div>
+    <div class="d-flex justify-content-center">
+{#        <form method="get" action="{% url 'edit_session' %}">#}
+            {% csrf_token %}
+            <input type="submit" value="Edit available sessions"/>
+        </form>
+    </div>
 {% endblock %}
