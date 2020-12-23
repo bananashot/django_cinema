@@ -1,9 +1,11 @@
 from datetime import date, timedelta
 
+from django.contrib import messages
 from django.contrib.auth import get_user_model, logout
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.views import LoginView, LogoutView
 from django.db.models import ExpressionWrapper, Sum, DecimalField, F
+from django.http import HttpResponseRedirect
 from django.utils.timezone import now
 from django.views.generic import CreateView, ListView, UpdateView
 
@@ -107,8 +109,50 @@ class ScheduleTomorrowView(ListView):
 class OrderTicketView(CreateView):
     model = Ticket
     form_class = TicketPurchaseForm
-    template_name = 'sessions_today.html'
+    template_name = 'order_ticket.html'
     success_url = '/order_history/'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        session_id = int(self.request.GET['session'])
+        session_object = Session.objects.get(id=session_id)
+
+        context['film'] = session_object.film.film_name
+        context['description'] = session_object.film.film_description
+        context['start'] = session_object.start_datetime
+        context['price'] = session_object.session_price
+
+        return context
+
+    def get_initial(self):
+        if self.request.session.get('old_value'):
+            self.initial['ordered_seats'] = self.request.session.get('old_value')
+            del self.request.session['old_value']
+
+        return self.initial.copy()
+
+    def form_valid(self, form):
+        order = form.save(commit=False)
+
+        self.request.session['old_value'] = order.ordered_seats
+
+        session_id = int(self.request.GET['session'])
+        session_object = Session.objects.get(id=session_id)
+        allowed_tickets = getattr(Hall.objects.get(id=session_object.hall_id),
+                                  'hall_capacity') - session_object.purchased_tickets
+
+        if order.ordered_seats > allowed_tickets:
+            msg = 'You can order only at least {} tickets'.format(allowed_tickets)
+            messages.error(self.request, msg)
+
+            return HttpResponseRedirect('/order_ticket/?session={}'.format(session_id))
+
+        order.buyer = self.request.user
+        order.ticket_for_session = session_object
+
+        order.save()
+
+        return super().form_valid(form)
 
 
 class PurchasedTicketsListView(ListView):
