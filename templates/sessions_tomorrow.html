@@ -52,19 +52,19 @@
                 <td>{{ object.start_datetime.time|time:'H:i' }}</td>
                 <td>${{ object.session_price }}</td>
                 <td> {{ object.purchased_tickets }}/{{ object.hall.hall_capacity }}</td>
-                {% if object.purchased_tickets != object.hall.hall_capacity %}
-                    {% if request.user.is_authenticated %}
+                {% if request.user.is_authenticated %}
+                    {% if object.purchased_tickets != object.hall.hall_capacity %}
                         <td>
                             <form method="get" action="{% url 'order_ticket' %}">
                                 <button class="btn btn-primary" type="submit">Purchase</button>
                                 <input type="hidden" name="session" value="{{ object.id }}">
                             </form>
                         </td>
+                    {% else %}
+                        <td>
+                            No seats
+                        </td>
                     {% endif %}
-                {% else %}
-                    <td>
-                        No seats
-                    </td>
                 {% endif %}
             </tr>
         {% endfor %}

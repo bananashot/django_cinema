@@ -1,7 +1,7 @@
 from datetime import date, timedelta
 
 from django.contrib import messages
-from django.contrib.auth import get_user_model, logout
+from django.contrib.auth import get_user_model, logout, user_logged_in
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.views import LoginView, LogoutView
 from django.db.models import ExpressionWrapper, Sum, DecimalField, F
@@ -12,6 +12,7 @@ from django.views.generic import CreateView, ListView, UpdateView
 from cinema_app.forms import SignUpForm, HallForm, CreateSessionForm, TicketPurchaseForm
 from cinema_app.models import CinemaUser, Session, Hall, Ticket
 from cinema_app.schedule_settings import EDITING_HOURS_UNTIL_SESSION, SCHEDULE_SORTING_METHODS
+from cinema_app.signals import admin_unlimited_session
 
 User = get_user_model()
 
@@ -26,6 +27,11 @@ class Registration(CreateView):
 class Login(LoginView):
     template_name = 'login.html'
 
+    def form_valid(self, form):
+        super(Login, self).form_valid(form)
+        user_logged_in.connect(admin_unlimited_session)
+        return HttpResponseRedirect(self.get_success_url())
+
 
 class Logout(LoginRequiredMixin, LogoutView):
 
@@ -39,11 +45,6 @@ class ProductList(ListView):
     template_name = 'products.html'
     paginate_by = 5
     queryset = Session.objects.all()
-
-    # def get_context_data(self, *, object_list=None, **kwargs):
-    #     context = super().get_context_data(object_list=object_list, **kwargs)
-    #     context.update({'form': PurchaseForm})
-    #     return context
 
 
 class CreateHallView(CreateView):
