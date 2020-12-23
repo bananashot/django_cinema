@@ -32,9 +32,13 @@
         </tbody>
     </table>
 
-    <b>Total - ${{ total_amount }}</b>
-
-    <br>
+    <div class="d-flex justify-content-end">
+    {% if total_amount %}
+        <pre><h5>Total - ${{ total_amount }}    </h5></pre>
+    {% else %}
+        <pre><h5>Total - $0.00   </h5> </pre>
+    {% endif %}
+    </div>
 
     <div class="pagination">
     <span class="step-links">

@@ -255,16 +255,16 @@ class OrderTicketView(LoginRequiredMixin, CreateView):
 class PurchasedTicketsListView(LoginRequiredMixin, ListView):
     model = Ticket
     template_name = 'purchased_ticket_list.html'
-    queryset = Ticket.objects.all().order_by('-ticket_for_session__start_datetime')
     paginate_by = 10
 
     def get_queryset(self):
-        return self.queryset.filter(buyer=self.request.user)
+        queryset = Ticket.objects.filter(buyer=self.request.user).order_by('-ticket_for_session__start_datetime')
+        return queryset
 
     def get_context_data(self, *, object_list=None, **kwargs):
         context = super().get_context_data(object_list=object_list, **kwargs)
 
-        total_amount = self.queryset.values('ticket_for_session__session_price', 'ordered_seats').aggregate(
+        total_amount = self.get_queryset().values('ticket_for_session__session_price', 'ordered_seats').aggregate(
             total_sum=Sum(ExpressionWrapper(F('ticket_for_session__session_price') * F('ordered_seats'),
                                             output_field=DecimalField())))
 
