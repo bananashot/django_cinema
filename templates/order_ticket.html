@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block content %}
+
+    <style>
+        h1 {
+            text-align: center;
+        }
+
+        p {
+            text-align: center;
+        }
+
+        div {
+            text-align: center;
+        }
+    </style>
+
+    <br>
+    <p>Film - {{ film }}</p>
+    <p>{{ description }}</p>
+    <p>{{ start }}</p>
+    <p>{{ price }}</p>
+
+    <br>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div>
+            <div class="badge badge-danger text-wrap" style="width: 20rem; height: 2rem">
+                <h6>{{ message }}</h6>
+            </div>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <br>
+
+    <div>
+        <form method="post">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit" class="btn btn-success">Save</button>
+        </form>
+    </div>
+
+
+{% endblock %}
