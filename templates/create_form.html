@@ -1,6 +1,15 @@
 {% extends "base.html" %}
 {% block content %}
 
+    {% if messages %}
+        {% for message in messages %}
+            <div>
+                <div class="badge badge-danger text-wrap" style="width: 20rem; height: 2rem">
+                    <h6>{{ message }}</h6>
+                </div>
+            </div>
+        {% endfor %}
+    {% endif %}
     <form method="post">
         {% csrf_token %}
         {{ form.as_p }}

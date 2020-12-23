@@ -74,6 +74,45 @@ class EditHallView(UpdateView):
     template_name = 'create_form.html'
     success_url = '/admin_tools/halls_list/'
 
+    def get_initial(self):
+        if self.request.session.get('hall_color') and self.request.session.get('hall_capacity'):
+            self.initial['hall_color'] = self.request.session.get('hall_color')
+            self.initial['hall_capacity'] = self.request.session.get('hall_capacity')
+
+            del self.request.session['hall_color']
+            del self.request.session['hall_capacity']
+
+        return self.initial.copy()
+
+    def form_valid(self, form):
+        hall_form = form.save(commit=False)
+
+        halls_in_use = Ticket.objects.filter(
+            ticket_for_session__start_datetime__gt=now() + timedelta(hours=EDITING_HOURS_UNTIL_SESSION)).values_list(
+            'ticket_for_session__hall__id', flat=True)
+
+        if hall_form.id in halls_in_use:
+            self.request.session.update(self.initial)
+
+            msg = 'This hall is already in use'
+            messages.error(self.request, msg)
+
+            return HttpResponseRedirect('/admin_tools/halls_list/edit/{}/'.format(hall_form.id))
+
+        hall_names = Hall.objects.exclude(id=hall_form.id).values_list('hall_color', flat=True)
+
+        if hall_form.hall_color in hall_names:
+            self.request.session.update(self.initial)
+
+            msg = 'This name is already used for another hall'
+            messages.error(self.request, msg)
+
+            return HttpResponseRedirect('/admin_tools/halls_list/edit/{}/'.format(hall_form.id))
+
+        hall_form.save()
+
+        return super().form_valid(form)
+
 
 class CreateSessionView(CreateView):
     model = Session
@@ -134,14 +173,14 @@ class OrderTicketView(CreateView):
     def form_valid(self, form):
         order = form.save(commit=False)
 
-        self.request.session['old_value'] = order.ordered_seats
-
         session_id = int(self.request.GET['session'])
         session_object = Session.objects.get(id=session_id)
         allowed_tickets = getattr(Hall.objects.get(id=session_object.hall_id),
                                   'hall_capacity') - session_object.purchased_tickets
 
         if order.ordered_seats > allowed_tickets:
+            self.request.session['old_value'] = order.ordered_seats
+
             msg = 'You can order only at least {} tickets'.format(allowed_tickets)
             messages.error(self.request, msg)
 

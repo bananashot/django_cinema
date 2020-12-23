@@ -1,9 +1,8 @@
-from datetime import date, timedelta, datetime
+from datetime import date, datetime
 
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.core.exceptions import ValidationError
-from django.db.models import F
 from django.forms import ModelForm, SelectDateWidget, TimeInput
 
 from cinema_app.models import CinemaUser, Hall, Session, Ticket
@@ -35,9 +34,6 @@ class HallForm(ModelForm):
 
         if not value.isalpha():
             raise ValidationError('Use only letters')
-
-        if value in Hall.objects.values_list('hall_color', flat=True):
-            raise ValidationError('Hall of this color already exists')
 
         return value
 
