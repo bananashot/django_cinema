@@ -1,6 +1,7 @@
 import math
 from datetime import date, timedelta
 
+from django.utils.timezone import now
 from rest_framework import serializers
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.viewsets import ModelViewSet
@@ -8,7 +9,7 @@ from rest_framework.viewsets import ModelViewSet
 from cinema_app.API.serializers import UserSerializer, TicketSerializer, SessionSerializer, FilmSerializer, \
     HallSerializer
 from cinema_app.models import CinemaUser, Ticket, Film, Session, Hall
-from cinema_app.schedule_settings import SCHEDULE_SORTING_METHODS
+from cinema_app.schedule_settings import SCHEDULE_SORTING_METHODS, ALLOWED_DAYS_BEFORE_EDITING
 
 
 class SessionScheduleUtilityAPIMixin:
@@ -59,6 +60,7 @@ class HallViewSet(ModelViewSet):
     serializer_class = HallSerializer
     http_method_names = ['get', 'post', 'patch']
     permission_classes = [IsAuthenticated,
+                          IsAdminUser,
                           ]
 
     def perform_create(self, serializer):
@@ -76,6 +78,15 @@ class HallViewSet(ModelViewSet):
 
         if serializer.validated_data['hall_color'] in hall_names:
             msg = 'This name is already used for another hall'
+            raise serializers.ValidationError({"hall_color": [msg]})
+
+        halls_in_use = Ticket.objects.filter(
+            ticket_for_session__start_datetime__gt=now() - timedelta(days=ALLOWED_DAYS_BEFORE_EDITING)).values_list(
+            'ticket_for_session__hall__id', flat=True)
+
+        if pk in halls_in_use:
+
+            msg = 'This hall is already in use'
             raise serializers.ValidationError({"hall_color": [msg]})
 
         serializer.save()
