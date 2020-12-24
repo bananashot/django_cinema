@@ -4,7 +4,7 @@
     {% if messages %}
         {% for message in messages %}
             <div>
-                <div class="badge badge-danger text-wrap" style="width: 20rem; height: 2rem">
+                <div class="alert alert-{{ message.tags }}">
                     <h6>{{ message }}</h6>
                 </div>
             </div>
