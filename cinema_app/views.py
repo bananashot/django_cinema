@@ -2,6 +2,7 @@ import math
 from datetime import date, timedelta, datetime
 
 import pytz
+from braces.views import SuperuserRequiredMixin
 from django.contrib import messages
 from django.contrib.auth import get_user_model, logout
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -12,7 +13,7 @@ from django.utils.timezone import now
 from django.views.generic import CreateView, ListView, UpdateView, TemplateView
 
 from cinema.settings import TIME_ZONE
-from cinema_app.forms import SignUpForm, HallForm, CreateSessionForm, TicketPurchaseForm
+from cinema_app.forms import SignUpForm, HallForm, CreateSessionForm, TicketPurchaseForm, EditSessionForm
 from cinema_app.models import CinemaUser, Session, Hall, Ticket, Film
 from cinema_app.schedule_settings import SCHEDULE_SORTING_METHODS, ALLOWED_DAYS_BEFORE_EDITING, \
     BREAK_BETWEEN_FILMS_MINUTES
@@ -38,7 +39,7 @@ class Logout(LoginRequiredMixin, LogoutView):
         return super().get(request, *args, **kwargs)
 
 
-class ScheduleSortingMixin:
+class SessionScheduleUtilityMixin:
 
     @staticmethod
     def schedule_sorting(query_to_sort, obj_request, sort_key, sorting_methods):
@@ -80,18 +81,18 @@ class ProductList(ListView):
     queryset = Session.objects.all()
 
 
-class AdminToolsView(LoginRequiredMixin, TemplateView):
+class AdminToolsView(SuperuserRequiredMixin, TemplateView):
     template_name = 'admin_tools.html'
 
 
-class CreateHallView(LoginRequiredMixin, CreateView):
+class CreateHallView(SuperuserRequiredMixin, CreateView):
     model = Hall
     form_class = HallForm
     template_name = 'create_form.html'
     success_url = '/admin_tools/'
 
 
-class AvailableToEditHallView(LoginRequiredMixin, ListView):
+class AvailableToEditHallView(SuperuserRequiredMixin, ListView):
     model = Hall
     template_name = 'halls_to_edit.html'
     queryset = Hall.objects.all()
@@ -107,7 +108,7 @@ class AvailableToEditHallView(LoginRequiredMixin, ListView):
         return halls_to_render
 
 
-class EditHallView(LoginRequiredMixin, UpdateView):
+class EditHallView(SuperuserRequiredMixin, UpdateView):
     model = Hall
     form_class = HallForm
     template_name = 'create_form.html'
@@ -152,7 +153,7 @@ class EditHallView(LoginRequiredMixin, UpdateView):
         return super().form_valid(form)
 
 
-class CreateSessionView(LoginRequiredMixin, CreateView, ScheduleSortingMixin):
+class CreateSessionView(SuperuserRequiredMixin, CreateView, SessionScheduleUtilityMixin):
     model = Session
     form_class = CreateSessionForm
     template_name = 'create_form.html'
@@ -232,19 +233,45 @@ class CreateSessionView(LoginRequiredMixin, CreateView, ScheduleSortingMixin):
         return HttpResponseRedirect(self.success_url)
 
 
-class SessionListWithoutTicketsView(LoginRequiredMixin, ListView):
+class SessionListWithoutTicketsView(SuperuserRequiredMixin, ListView, SessionScheduleUtilityMixin):
     model = Session
     template_name = 'no_tickets_session.html'
     paginate_by = 10
 
+    def get_context_data(self, *, object_list=None, **kwargs):
+        context = super().get_context_data(object_list=object_list, **kwargs)
+        context['sort_methods'] = SCHEDULE_SORTING_METHODS
+        return context
+
     def get_queryset(self):
-        queryset = Session.objects.filter(start_datetime__gt=now() + timedelta(days=ALLOWED_DAYS_BEFORE_EDITING))
+        queryset = Session.objects.filter(
+            start_datetime__gt=now() + timedelta(days=ALLOWED_DAYS_BEFORE_EDITING)).order_by('start_datetime')
+
+        if self.request.GET.get('sort') in SCHEDULE_SORTING_METHODS:
+            queryset = self.schedule_sorting(queryset, self.request, 'sort', SCHEDULE_SORTING_METHODS)
+
         sessions_without_tickets = [obj for obj in queryset if not obj.purchased_tickets]
 
         return sessions_without_tickets
 
 
-class ScheduleTodayView(ListView, ScheduleSortingMixin):
+class EditSessionView(SuperuserRequiredMixin, UpdateView, SessionScheduleUtilityMixin):
+    model = Session
+    form_class = EditSessionForm
+    template_name = 'create_form.html'
+    success_url = '/admin_tools/_list/'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        session_instance = context.get('session')
+
+        context['form'].initial['session_date_start'] = session_instance.start_datetime.date()
+        context['form'].initial['session_start_time'] = session_instance.start_datetime.time().strftime('%H:%M')
+
+        return context
+
+
+class ScheduleTodayView(ListView, SessionScheduleUtilityMixin):
     model = Session
     template_name = 'sessions_today.html'
     queryset = Session.objects.filter(start_datetime__contains=date.today())
@@ -253,7 +280,6 @@ class ScheduleTodayView(ListView, ScheduleSortingMixin):
     def get_context_data(self, *, object_list=None, **kwargs):
         context = super().get_context_data(object_list=object_list, **kwargs)
         context['sort_methods'] = SCHEDULE_SORTING_METHODS
-        context.update({'form': TicketPurchaseForm})
         return context
 
     def get_queryset(self):
@@ -264,7 +290,7 @@ class ScheduleTodayView(ListView, ScheduleSortingMixin):
         return self.queryset
 
 
-class ScheduleTomorrowView(ListView, ScheduleSortingMixin):
+class ScheduleTomorrowView(ListView, SessionScheduleUtilityMixin):
     model = Session
     template_name = 'sessions_tomorrow.html'
     queryset = Session.objects.filter(

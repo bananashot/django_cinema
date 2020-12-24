@@ -6,7 +6,7 @@ from django.core.exceptions import ValidationError
 from django.forms import ModelForm, SelectDateWidget, TimeInput
 
 from cinema_app.models import CinemaUser, Hall, Session, Ticket
-from cinema_app.schedule_settings import MAXIMUM_DAYS_IN_SESSION_BULK_CREATION
+from cinema_app.schedule_settings import MAXIMUM_DAYS_IN_SESSION_BULK_CREATION, ALLOWED_DAYS_BEFORE_EDITING
 
 
 class SignUpForm(UserCreationForm):
@@ -63,8 +63,9 @@ class CreateSessionForm(ModelForm):
     def clean_session_date_start(self):
         value = self.cleaned_data.get('session_date_start')
 
-        if not value > date.today():
-            raise ValidationError('You can create a session only from tomorrow')
+        if value < date.today() + timedelta(days=ALLOWED_DAYS_BEFORE_EDITING):
+            msg = 'You can create/edit sessions only {} day(s) beforehand'.format(ALLOWED_DAYS_BEFORE_EDITING)
+            raise ValidationError(msg)
 
         return value
 
@@ -89,6 +90,32 @@ class CreateSessionForm(ModelForm):
                 self.add_error('session_date_end', error)
 
         return cleaned_data
+
+
+class EditSessionForm(ModelForm):
+    session_date_start = forms.DateField(required=True,
+                                         widget=SelectDateWidget(
+                                             empty_label=("Choose Year", "Choose Month", "Choose Day"),
+                                         ),
+                                         )
+    session_start_time = forms.TimeField(required=True,
+                                         widget=TimeInput(
+                                             format='%h:%m', attrs={'type': 'time'},
+                                         ),
+                                         )
+
+    class Meta:
+        model = Session
+        fields = ['film', 'hall', 'session_price', ]
+
+    def clean_session_date_start(self):
+        value = self.cleaned_data.get('session_date_start')
+
+        if value < date.today() + timedelta(days=ALLOWED_DAYS_BEFORE_EDITING):
+            msg = 'You can create/edit sessions only {} day(s) beforehand'.format(ALLOWED_DAYS_BEFORE_EDITING)
+            raise ValidationError(msg)
+
+        return value
 
 
 class TicketPurchaseForm(ModelForm):
