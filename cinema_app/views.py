@@ -64,7 +64,7 @@ class ScheduleSortingMixin:
         latest_start = max(existing_session_dict.get(start_time_name), session_to_create_dict.get(start_time_name))
         earliest_end = min(existing_session_dict.get(end_time_name), session_to_create_dict.get(end_time_name))
 
-        if earliest_end > latest_start:
+        if earliest_end >= latest_start:
             delta = math.floor((earliest_end - latest_start).seconds / 60)
 
             return delta
@@ -77,7 +77,7 @@ class ScheduleSortingMixin:
 class ProductList(ListView):
     model = Session
     template_name = 'products.html'
-    paginate_by = 5
+    paginate_by = 20
     queryset = Session.objects.all()
 
 
@@ -150,8 +150,6 @@ class EditHallView(LoginRequiredMixin, UpdateView):
 
             return HttpResponseRedirect('/admin_tools/halls_list/edit/{}/'.format(hall_form.id))
 
-        hall_form.save()
-
         return super().form_valid(form)
 
 
@@ -165,29 +163,34 @@ class CreateSessionView(LoginRequiredMixin, CreateView, ScheduleSortingMixin):
         new_session = form.save(commit=False)
 
         film_duration = Film.objects.get(id=new_session.film_id).schedule_minutes
-        days_in_new_session = []
+        hall_for_session = form.cleaned_data['hall']
 
         new_session_start_date = form.cleaned_data['session_date_start']
         new_session_end_date = form.cleaned_data['session_date_end']
         new_session_start_time = form.cleaned_data['session_start_time']
 
+        days_in_new_session = []
+
+        """Creates a list for each day between dates in form"""
         for day in range((new_session_end_date - new_session_start_date).days + 1):
-            day_obj = form.cleaned_data['session_date_start'] + timedelta(days=day)
+            day_obj = new_session_start_date + timedelta(days=day)
             days_in_new_session.append(day_obj)
 
+        """Searches for possible conflicting session on each day"""
         for day in days_in_new_session:
             ids_of_conflicting_sessions = Session.objects.filter(start_datetime__date=day,
                                                                  hall=new_session.hall_id).values_list('id', flat=True)
 
             starting_time_new_session = datetime.combine(day, new_session_start_time)
 
-            new_session.id, new_session.pk = None, None  # multiple create
+            """Required for multiple creation to model and not editing of only 1 field"""
+            new_session.id, new_session.pk = None, None
 
             if not ids_of_conflicting_sessions:
                 new_session.start_datetime = starting_time_new_session
                 new_session.save()
 
-                msg = 'Session on {} is created'.format(day)
+                msg = 'Session on {} in hall {} is created'.format(starting_time_new_session, hall_for_session)
                 messages.success(self.request, msg)
 
             else:
@@ -199,21 +202,24 @@ class CreateSessionView(LoginRequiredMixin, CreateView, ScheduleSortingMixin):
                     session_to_create = {}
 
                     ending_time_with_break = starting_time_new_session + timedelta(
-                        minutes=film_duration) + timedelta(minutes=BREAK_BETWEEN_FILMS_MINUTES)
+                        minutes=film_duration + BREAK_BETWEEN_FILMS_MINUTES)
 
+                    """Required to add timezone variable to datetime received from form"""
                     local_time = pytz.timezone(TIME_ZONE)
 
                     existing_session['start_datetime'] = session_instance.start_datetime
-                    existing_session['end_datetime'] = session_instance.end_datetime
+                    existing_session['end_datetime'] = session_instance.film_end_with_break
                     session_to_create['start_datetime'] = local_time.localize(starting_time_new_session)
                     session_to_create['end_datetime'] = local_time.localize(ending_time_with_break)
 
                     overlap = self.check_session_overlap(existing_session, session_to_create, 'start_datetime',
                                                          'end_datetime')
 
+                    """Is overlap is greater than 0, then films in this hall are overlapping"""
                     if overlap:
 
-                        msg = 'Session on {} overlapping another session for {} minute(s)'.format(day, overlap)
+                        msg = 'Session on {} overlapping another session in hall {} for {} minute(s)'.format(
+                            starting_time_new_session, hall_for_session, overlap)
                         messages.warning(self.request, msg)
 
                     else:
@@ -221,10 +227,10 @@ class CreateSessionView(LoginRequiredMixin, CreateView, ScheduleSortingMixin):
                         new_session.start_datetime = starting_time_new_session
                         new_session.save()
 
-                        msg = 'Session on {} is created'.format(day)
+                        msg = 'Session on {} in hall {} is created'.format(starting_time_new_session, hall_for_session)
                         messages.success(self.request, msg)
 
-        return HttpResponseRedirect('/admin_tools/create_session/')
+        return HttpResponseRedirect(self.success_url)
 
 
 class SessionListWithoutTicketsView(LoginRequiredMixin, ListView):

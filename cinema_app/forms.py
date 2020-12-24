@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
@@ -6,6 +6,7 @@ from django.core.exceptions import ValidationError
 from django.forms import ModelForm, SelectDateWidget, TimeInput
 
 from cinema_app.models import CinemaUser, Hall, Session, Ticket
+from cinema_app.schedule_settings import MAXIMUM_DAYS_IN_SESSION_BULK_CREATION
 
 
 class SignUpForm(UserCreationForm):
@@ -72,7 +73,6 @@ class CreateSessionForm(ModelForm):
 
         start_date_value = cleaned_data.get('session_date_start')
         end_date_value = cleaned_data.get('session_date_end')
-        time_value = cleaned_data.get('session_start_time')
 
         if start_date_value and end_date_value:
             if not start_date_value <= end_date_value:
@@ -81,8 +81,12 @@ class CreateSessionForm(ModelForm):
                 self.add_error('session_date_start', error)
                 self.add_error('session_date_end', error)
 
-        if not self.has_error('session_date_start') and not self.has_error('end_date_value'):
-            ...
+            if end_date_value > start_date_value + timedelta(days=MAXIMUM_DAYS_IN_SESSION_BULK_CREATION):
+                error = ValidationError(
+                    'Your date range exceeds a limit of {} days'.format(MAXIMUM_DAYS_IN_SESSION_BULK_CREATION))
+
+                self.add_error('session_date_start', error)
+                self.add_error('session_date_end', error)
 
         return cleaned_data
 
