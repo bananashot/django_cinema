@@ -41,7 +41,7 @@ class Film(models.Model):
 
 
 class Hall(models.Model):
-    hall_color = models.CharField(max_length=120, blank=False, unique=True)
+    hall_color = models.CharField(max_length=120, blank=False)
     hall_capacity = models.PositiveIntegerField(blank=False, validators=[MinValueValidator(1)])
 
     def __str__(self):

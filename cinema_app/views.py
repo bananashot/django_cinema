@@ -91,6 +91,31 @@ class CreateHallView(SuperuserRequiredMixin, CreateView):
     template_name = 'create_form.html'
     success_url = '/admin_tools/'
 
+    def get_initial(self):
+        if self.request.session.get('hall_color') and self.request.session.get('hall_capacity'):
+            self.initial['hall_color'] = self.request.session.get('hall_color')
+            self.initial['hall_capacity'] = self.request.session.get('hall_capacity')
+
+            del self.request.session['hall_color']
+            del self.request.session['hall_capacity']
+
+        return self.initial.copy()
+
+    def form_valid(self, form):
+        hall_form = form.save(commit=False)
+
+        hall_names = Hall.objects.values_list('hall_color', flat=True)
+
+        if hall_form.hall_color in hall_names:
+            self.request.session.update(form.cleaned_data)
+
+            msg = 'This name is already used for another hall'
+            messages.warning(self.request, msg)
+
+            return HttpResponseRedirect('/admin_tools/create_hall/')
+
+        return super().form_valid(form)
+
 
 class AvailableToEditHallView(SuperuserRequiredMixin, ListView):
     model = Hall

@@ -2,6 +2,7 @@ from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer
 
 from cinema_app.models import CinemaUser, Hall, Film, Session, Ticket
+from cinema_app.schedule_settings import SCHEDULE_SORTING_METHODS
 
 
 class UserSerializer(ModelSerializer):

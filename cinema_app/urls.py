@@ -14,6 +14,8 @@ router.register(r'halls', resources.HallViewSet)
 router.register(r'films', resources.FilmViewSet)
 router.register(r'sessions', resources.SessionViewSet)
 router.register(r'tickets', resources.TicketViewSet)
+router.register(r'today_session', resources.ScheduleTodayView)
+router.register(r'tomorrow_session', resources.ScheduleTomorrowView)
 
 urlpatterns = [
     path('', ProductList.as_view(), name='products'),
