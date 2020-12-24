@@ -85,7 +85,6 @@ class HallViewSet(ModelViewSet):
             'ticket_for_session__hall__id', flat=True)
 
         if pk in halls_in_use:
-
             msg = 'This hall is already in use'
             raise serializers.ValidationError({"hall_color": [msg]})
 
@@ -148,5 +147,17 @@ class TicketViewSet(ModelViewSet):
         return Ticket.objects.filter(id=user.id)
 
     def perform_create(self, serializer):
+        session_object = serializer.validated_data.get('ticket_for_session')
+        hall_object = Hall.objects.get(id=session_object.hall_id)
+        allowed_tickets = Hall.objects.get(id=session_object.hall_id).hall_capacity - session_object.purchased_tickets
+
+        if session_object.purchased_tickets == hall_object.hall_capacity:
+            msg = 'No seats left for the chosen session'
+            raise serializers.ValidationError(msg)
+
+        if serializer.validated_data.get('ordered_seats') > allowed_tickets:
+            msg = 'You can order only at least {} tickets'.format(allowed_tickets)
+            raise serializers.ValidationError({"ordered_seats": [msg]})
+
         serializer.validated_data['buyer'] = self.request.user
         serializer.save()

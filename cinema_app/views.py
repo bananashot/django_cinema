@@ -429,8 +429,7 @@ class OrderTicketView(LoginRequiredMixin, CreateView):
         session_id = int(self.request.GET['session'])
         session_object = Session.objects.get(id=session_id)
         hall_object = Hall.objects.get(id=session_object.hall_id)
-        allowed_tickets = getattr(Hall.objects.get(id=session_object.hall_id),
-                                  'hall_capacity') - session_object.purchased_tickets
+        allowed_tickets = Hall.objects.get(id=session_object.hall_id).hall_capacity - session_object.purchased_tickets
 
         if session_object.purchased_tickets == hall_object.hall_capacity:
 
