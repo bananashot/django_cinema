@@ -13,66 +13,68 @@
 
     <br>
 
-    {% if messages %}
-        {% for message in messages %}
-            <div>
-                <div class="badge badge-danger text-wrap" style="width: 20rem; height: 2rem">
-                    <h6>{{ message }}</h6>
+    {% if page_obj %}
+
+        {% if messages %}
+            {% for message in messages %}
+                <div>
+                    <div class="badge badge-danger text-wrap" style="width: 20rem; height: 2rem">
+                        <h6>{{ message }}</h6>
+                    </div>
                 </div>
-            </div>
-        {% endfor %}
-    {% endif %}
+            {% endfor %}
+        {% endif %}
 
-    <br>
+        <br>
 
-    <div class="d-flex justify-content-end">
-        <h6>Sort:</h6>
-        {% for method in sort_methods %}
-            <pre><span>  <a href="?sort={{ method }}">{{ method }}</a></span></pre></pre>
-        {% endfor %}
-        <pre>    </pre>
-    </div>
+        <div class="d-flex justify-content-end">
+            <h6>Sort:</h6>
+            {% for method in sort_methods %}
+                <pre><span>  <a href="?sort={{ method }}">{{ method }}</a></span></pre></pre>
+            {% endfor %}
+            <pre>    </pre>
+        </div>
 
-    <table class="table">
-        <thead>
-        <tr>
-            <th scope="col">Film</th>
-            <th scope="col">Time</th>
-            <th scope="col">Price</th>
-            <th scope="col">Tickets</th>
-            {% if request.user.is_authenticated %}
-                <th scope="col">Order</th>
-            {% endif %}
-        </tr>
-        </thead>
-        <tbody>
-        {% for object in page_obj %}
+        <table class="table">
+            <thead>
             <tr>
-                <td>{{ object.film.film_name }}</td>
-                <td>{{ object.start_datetime.time|time:'H:i' }}</td>
-                <td>${{ object.session_price }}</td>
-                <td> {{ object.purchased_tickets }}/{{ object.hall.hall_capacity }}</td>
+                <th scope="col">Film</th>
+                <th scope="col">Time</th>
+                <th scope="col">Price</th>
+                <th scope="col">Tickets</th>
                 {% if request.user.is_authenticated %}
-                    {% if object.purchased_tickets != object.hall.hall_capacity %}
-                        <td>
-                            <form method="get" action="{% url 'order_ticket' %}">
-                                <button class="btn btn-primary" type="submit">Purchase</button>
-                                <input type="hidden" name="session" value="{{ object.id }}">
-                            </form>
-                        </td>
-                    {% else %}
-                        <td>
-                            No seats
-                        </td>
-                    {% endif %}
+                    <th scope="col">Order</th>
                 {% endif %}
             </tr>
-        {% endfor %}
+            </thead>
+            <tbody>
+            {% for object in page_obj %}
+                <tr>
+                    <td>{{ object.film.film_name }}</td>
+                    <td>{{ object.start_datetime.time|time:'H:i' }}</td>
+                    <td>${{ object.session_price }}</td>
+                    <td> {{ object.purchased_tickets }}/{{ object.hall.hall_capacity }}</td>
+                    {% if request.user.is_authenticated %}
+                        {% if object.purchased_tickets != object.hall.hall_capacity %}
+                            <td>
+                                <form method="get" action="{% url 'order_ticket' %}">
+                                    <button class="btn btn-primary" type="submit">Purchase</button>
+                                    <input type="hidden" name="session" value="{{ object.id }}">
+                                </form>
+                            </td>
+                        {% else %}
+                            <td>
+                                No seats
+                            </td>
+                        {% endif %}
+                    {% endif %}
+                </tr>
+            {% endfor %}
 
-        </tbody>
-    </table>
+            </tbody>
+        </table>
 
-    <div class="pagination">
+        <div class="pagination">
     <span class="step-links">
         {% if page_obj.has_previous %}
             <a href="?page=1">&laquo; first</a>
@@ -88,6 +90,14 @@
             <a href="?page={{ page_obj.paginator.num_pages }}">last &raquo;</a>
         {% endif %}
     </span>
-    </div>
+        </div>
+
+    {% else %}
+        <div class="d-flex justify-content-center">
+            <div class="badge badge-danger text-wrap" style="width: 20rem; height: 2rem">
+                <h6>Nothing to buy here for now</h6>
+            </div>
+        </div>
+    {% endif %}
 
 {% endblock %}

@@ -42,21 +42,20 @@ class ScheduleSortingMixin:
 
     @staticmethod
     def schedule_sorting(query_to_sort, obj_request, sort_key, sorting_methods):
-        if obj_request.GET.get(sort_key) in sorting_methods:
 
-            if obj_request.GET[sort_key] == sorting_methods[0]:
-                return query_to_sort.order_by('start_datetime', 'session_price')
+        if obj_request.GET[sort_key] == sorting_methods[0]:
+            return query_to_sort.order_by('start_datetime', 'session_price')
 
-            if obj_request.GET[sort_key] == sorting_methods[1]:
-                return query_to_sort.order_by('-start_datetime', 'session_price')
+        if obj_request.GET[sort_key] == sorting_methods[1]:
+            return query_to_sort.order_by('-start_datetime', 'session_price')
 
-            if obj_request.GET[sort_key] == sorting_methods[2]:
-                return query_to_sort.order_by('session_price', 'start_datetime')
+        if obj_request.GET[sort_key] == sorting_methods[2]:
+            return query_to_sort.order_by('session_price', 'start_datetime')
 
-            if obj_request.GET[sort_key] == sorting_methods[3]:
-                return query_to_sort.order_by('-session_price', 'start_datetime')
+        if obj_request.GET[sort_key] == sorting_methods[3]:
+            return query_to_sort.order_by('-session_price', 'start_datetime')
 
-            return query_to_sort
+        return query_to_sort
 
     @staticmethod
     def check_session_overlap(existing_session_dict, session_to_create_dict, start_time_name, end_time_name):
@@ -258,9 +257,11 @@ class ScheduleTodayView(ListView, ScheduleSortingMixin):
         return context
 
     def get_queryset(self):
-        sorting_result = self.schedule_sorting(self.queryset, self.request, 'sort', SCHEDULE_SORTING_METHODS)
+        if self.request.GET.get('sort') in SCHEDULE_SORTING_METHODS:
+            sorting_result = self.schedule_sorting(self.queryset, self.request, 'sort', SCHEDULE_SORTING_METHODS)
+            return sorting_result
 
-        return sorting_result
+        return self.queryset
 
 
 class ScheduleTomorrowView(ListView, ScheduleSortingMixin):
@@ -277,9 +278,11 @@ class ScheduleTomorrowView(ListView, ScheduleSortingMixin):
         return context
 
     def get_queryset(self):
-        sorting_result = self.schedule_sorting(self.queryset, self.request, 'sort', SCHEDULE_SORTING_METHODS)
+        if self.request.GET.get('sort') in SCHEDULE_SORTING_METHODS:
+            sorting_result = self.schedule_sorting(self.queryset, self.request, 'sort', SCHEDULE_SORTING_METHODS)
+            return sorting_result
 
-        return sorting_result
+        return self.queryset
 
 
 class OrderTicketView(LoginRequiredMixin, CreateView):
