@@ -181,16 +181,16 @@ class CreateSessionView(SuperuserRequiredMixin, CreateView, SessionScheduleUtili
             ids_of_conflicting_sessions = Session.objects.filter(start_datetime__date=day,
                                                                  hall=new_session.hall_id).values_list('id', flat=True)
 
-            starting_time_new_session = datetime.combine(day, new_session_start_time)
+            starting_datetime_new_session = datetime.combine(day, new_session_start_time)
 
             """Required for multiple creation to model and not editing of only 1 field"""
             new_session.id, new_session.pk = None, None
 
             if not ids_of_conflicting_sessions:
-                new_session.start_datetime = starting_time_new_session
+                new_session.start_datetime = starting_datetime_new_session
                 new_session.save()
 
-                msg = 'Session on {} in hall {} is created'.format(starting_time_new_session, hall_for_session)
+                msg = 'Session on {} in hall {} is created'.format(starting_datetime_new_session, hall_for_session)
                 messages.success(self.request, msg)
 
             else:
@@ -201,7 +201,7 @@ class CreateSessionView(SuperuserRequiredMixin, CreateView, SessionScheduleUtili
                     existing_session = {}
                     session_to_create = {}
 
-                    ending_time_with_break = starting_time_new_session + timedelta(
+                    ending_time_with_break = starting_datetime_new_session + timedelta(
                         minutes=film_duration + BREAK_BETWEEN_FILMS_MINUTES)
 
                     """Required to add timezone variable to datetime received from form"""
@@ -209,7 +209,7 @@ class CreateSessionView(SuperuserRequiredMixin, CreateView, SessionScheduleUtili
 
                     existing_session['start_datetime'] = session_instance.start_datetime
                     existing_session['end_datetime'] = session_instance.film_end_with_break
-                    session_to_create['start_datetime'] = local_time.localize(starting_time_new_session)
+                    session_to_create['start_datetime'] = local_time.localize(starting_datetime_new_session)
                     session_to_create['end_datetime'] = local_time.localize(ending_time_with_break)
 
                     overlap = self.check_session_overlap(existing_session, session_to_create, 'start_datetime',
@@ -219,15 +219,16 @@ class CreateSessionView(SuperuserRequiredMixin, CreateView, SessionScheduleUtili
                     if overlap:
 
                         msg = 'Session on {} overlapping another session in hall {} for {} minute(s)'.format(
-                            starting_time_new_session, hall_for_session, overlap)
+                            starting_datetime_new_session, hall_for_session, overlap)
                         messages.warning(self.request, msg)
 
                     else:
 
-                        new_session.start_datetime = starting_time_new_session
+                        new_session.start_datetime = starting_datetime_new_session
                         new_session.save()
 
-                        msg = 'Session on {} in hall {} is created'.format(starting_time_new_session, hall_for_session)
+                        msg = 'Session on {} in hall {} is created'.format(starting_datetime_new_session,
+                                                                           hall_for_session)
                         messages.success(self.request, msg)
 
         return HttpResponseRedirect(self.success_url)
@@ -259,7 +260,7 @@ class EditSessionView(SuperuserRequiredMixin, UpdateView, SessionScheduleUtility
     model = Session
     form_class = EditSessionForm
     template_name = 'create_form.html'
-    success_url = '/admin_tools/_list/'
+    success_url = '/admin_tools/session_list/'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -269,6 +270,67 @@ class EditSessionView(SuperuserRequiredMixin, UpdateView, SessionScheduleUtility
         context['form'].initial['session_start_time'] = session_instance.start_datetime.time().strftime('%H:%M')
 
         return context
+
+    def form_valid(self, form):
+        session_editing = form.save(commit=False)
+
+        film_duration = Film.objects.get(id=session_editing.film_id).schedule_minutes
+        hall_for_session = form.cleaned_data['hall']
+
+        new_session_start_date = form.cleaned_data['session_date_start']
+        new_session_start_time = form.cleaned_data['session_start_time']
+        starting_datetime_new_session = datetime.combine(new_session_start_date, new_session_start_time)
+
+        ids_of_conflicting_sessions = Session.objects.filter(start_datetime__date=new_session_start_date,
+                                                             hall=session_editing.hall_id).exclude(
+            id=session_editing.id).values_list('id', flat=True)
+
+        if not ids_of_conflicting_sessions:
+            session_editing.start_datetime = starting_datetime_new_session
+            session_editing.save()
+
+            msg = 'Session on {} in hall {} is created'.format(starting_datetime_new_session, hall_for_session)
+            messages.success(self.request, msg)
+
+        else:
+
+            for session_id in ids_of_conflicting_sessions:
+                session_instance = Session.objects.get(id=session_id)
+
+                existing_session = {}
+                session_to_create = {}
+
+                ending_time_with_break = starting_datetime_new_session + timedelta(
+                    minutes=film_duration + BREAK_BETWEEN_FILMS_MINUTES)
+
+                """Required to add timezone variable to datetime received from form"""
+                local_time = pytz.timezone(TIME_ZONE)
+
+                existing_session['start_datetime'] = session_instance.start_datetime
+                existing_session['end_datetime'] = session_instance.film_end_with_break
+                session_to_create['start_datetime'] = local_time.localize(starting_datetime_new_session)
+                session_to_create['end_datetime'] = local_time.localize(ending_time_with_break)
+
+                overlap = self.check_session_overlap(existing_session, session_to_create, 'start_datetime',
+                                                     'end_datetime')
+
+                """Is overlap is greater than 0, then films in this hall are overlapping"""
+                if overlap:
+
+                    msg = 'Session on {} overlapping another session in hall {} for {} minute(s)'.format(
+                        starting_datetime_new_session, hall_for_session, overlap)
+                    messages.warning(self.request, msg)
+
+                else:
+
+                    session_editing.start_datetime = starting_datetime_new_session
+                    session_editing.save()
+
+                    msg = 'Session on {} in hall {} is created'.format(starting_datetime_new_session,
+                                                                       hall_for_session)
+                    messages.success(self.request, msg)
+
+        return HttpResponseRedirect(self.success_url)
 
 
 class ScheduleTodayView(ListView, SessionScheduleUtilityMixin):
