@@ -1,4 +1,4 @@
-from rest_framework import permissions
+from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.viewsets import ModelViewSet
 
 from cinema_app.API.serializers import UserSerializer, TicketSerializer, SessionSerializer, FilmSerializer, \
@@ -9,16 +9,22 @@ from cinema_app.models import CinemaUser, Ticket, Film, Session, Hall
 class UserViewSet(ModelViewSet):
     queryset = CinemaUser.objects.all()
     serializer_class = UserSerializer
-    permission_classes = [permissions.IsAuthenticated,
+    permission_classes = [IsAuthenticated,
+                          IsAdminUser
                           ]
 
 
 class HallViewSet(ModelViewSet):
     queryset = Hall.objects.all()
     serializer_class = HallSerializer
-    http_method_names = ['get']
-    permission_classes = [permissions.IsAuthenticated,
+    http_method_names = ['get', 'post']
+    permission_classes = [IsAuthenticated,
                           ]
+
+    def create(self, request, *args, **kwargs):
+        response = super().create(request)
+
+        return response
 
 
 class FilmViewSet(ModelViewSet):
@@ -36,5 +42,18 @@ class SessionViewSet(ModelViewSet):
 class TicketViewSet(ModelViewSet):
     queryset = Ticket.objects.all()
     serializer_class = TicketSerializer
-    permission_classes = [permissions.IsAuthenticated,
+    http_method_names = ['get', 'post']
+    permission_classes = [IsAuthenticated,
                           ]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_superuser:
+            return Ticket.objects.all()
+        return Ticket.objects.filter(id=user.id)
+
+
+
+    def perform_create(self, serializer):
+        serializer.validated_data['buyer'] = self.request.user
+        serializer.save()
