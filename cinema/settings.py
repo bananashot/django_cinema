@@ -125,7 +125,7 @@ STATIC_URL = '/static/'
 
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 ADMIN_SESSION_COOKIE_AGE = 60 * 60 * 24
-SESSION_COOKIE_AGE = 300
+SESSION_COOKIE_AGE = 60 * 5
 SESSION_SAVE_EVERY_REQUEST = True
 
 AUTH_USER_MODEL = 'cinema_app.CinemaUser'
@@ -136,9 +136,13 @@ LOGIN_REDIRECT_URL = '/'
 
 LOGOUT_REDIRECT_URL = '/'
 
+TOKEN_TIME_TO_LIVE = 5
+
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.TokenAuthentication',
+        'rest_framework.authentication.BasicAuthentication',
+        # 'rest_framework.authentication.TokenAuthentication',
+        # 'cinema_app.API.authentication.APITokenAuthentication'
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20

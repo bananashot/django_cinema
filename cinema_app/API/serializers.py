@@ -35,7 +35,8 @@ class FilmSerializer(ModelSerializer):
 
 
 class SessionSerializer(ModelSerializer):
-    sorting_methods = serializers.SerializerMethodField()
+    sorting_methods = serializers.SerializerMethodField(read_only=True)
+    available_tickets = serializers.SerializerMethodField(read_only=True)
 
     def get_sorting_methods(self, instance):
 
@@ -49,6 +50,14 @@ class SessionSerializer(ModelSerializer):
 
         return self.context.get('sorting_methods')
 
+    def get_available_tickets(self, instance):
+
+        current_session = instance
+        available_tickets = Hall.objects.get(
+            id=current_session.hall_id).hall_capacity - current_session.purchased_tickets
+
+        return available_tickets
+
     class Meta:
         model = Session
         fields = [
@@ -57,6 +66,7 @@ class SessionSerializer(ModelSerializer):
             'start_datetime',
             'film',
             'hall',
+            'available_tickets',
             'sorting_methods',
         ]
 
