@@ -1,6 +1,7 @@
 import math
 from datetime import date, timedelta
 
+from django.db.models import Sum, ExpressionWrapper, F, DecimalField
 from django.utils.timezone import now
 from rest_framework import serializers
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
@@ -140,15 +141,18 @@ class TicketViewSet(ModelViewSet):
     permission_classes = [IsAuthenticated,
                           ]
 
-    def get_object(self):
-        obj = super().get_object()
-        return obj
-
     def get_queryset(self):
         user = self.request.user
-        if user.is_superuser:
-            return Ticket.objects.all()
-        return Ticket.objects.filter(id=user.id)
+        return Ticket.objects.filter(buyer_id=user.id)
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        total = Ticket.objects.filter(buyer=self.request.user).aggregate(total_sum=Sum(
+            ExpressionWrapper(F('ticket_for_session__session_price') * F('ordered_seats'),
+                              output_field=DecimalField()
+                              )))
+        context['total'] = total.get('total_sum')
+        return context
 
     def perform_create(self, serializer):
         session_object = serializer.validated_data.get('ticket_for_session')

@@ -9,7 +9,11 @@ from cinema_app.schedule_settings import SCHEDULE_SORTING_METHODS
 class UserSerializer(ModelSerializer):
     class Meta:
         model = CinemaUser
-        fields = ['username', 'first_name', 'last_name']
+        fields = [
+            'username',
+            'first_name',
+            'last_name',
+        ]
 
 
 class HallSerializer(ModelSerializer):
@@ -34,12 +38,16 @@ class SessionSerializer(ModelSerializer):
     sorting_methods = serializers.SerializerMethodField()
 
     def get_sorting_methods(self, instance):
-        sorting_args = []
 
-        for method in SCHEDULE_SORTING_METHODS:
-            sorting_args.append('?sort={}'.format(method))
+        if not self.context.get('sorting_methods'):
+            sorting_args = []
 
-        return sorting_args
+            for method in SCHEDULE_SORTING_METHODS:
+                sorting_args.append('?sort={}'.format(method))
+
+            self.context['sorting_methods'] = sorting_args
+
+        return self.context.get('sorting_methods')
 
     class Meta:
         model = Session
@@ -58,11 +66,8 @@ class TicketSerializer(ModelSerializer):
     account_total = serializers.SerializerMethodField()
 
     def get_account_total(self, instance):
-        total = Ticket.objects.filter(buyer=instance.buyer).values('ticket_for_session__session_price',
-                                                                   'ordered_seats').aggregate(
-            total_sum=Sum(ExpressionWrapper(F('ticket_for_session__session_price') * F('ordered_seats'),
-                                            output_field=DecimalField())))
-        return total.get('total_sum')
+        spent_total = self.context['total']
+        return spent_total
 
     class Meta:
         model = Ticket
