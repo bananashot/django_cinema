@@ -140,6 +140,10 @@ class TicketViewSet(ModelViewSet):
     permission_classes = [IsAuthenticated,
                           ]
 
+    def get_object(self):
+        obj = super().get_object()
+        return obj
+
     def get_queryset(self):
         user = self.request.user
         if user.is_superuser:

@@ -1,3 +1,4 @@
+from django.db.models import Sum, ExpressionWrapper, DecimalField, F
 from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer
 
@@ -30,13 +31,38 @@ class FilmSerializer(ModelSerializer):
 
 
 class SessionSerializer(ModelSerializer):
+    sorting_methods = serializers.SerializerMethodField()
+
+    def get_sorting_methods(self, instance):
+        sorting_args = []
+
+        for method in SCHEDULE_SORTING_METHODS:
+            sorting_args.append('?sort={}'.format(method))
+
+        return sorting_args
+
     class Meta:
         model = Session
-        fields = '__all__'
+        fields = [
+            'id',
+            'session_price',
+            'start_datetime',
+            'film',
+            'hall',
+            'sorting_methods',
+        ]
 
 
 class TicketSerializer(ModelSerializer):
     buyer = serializers.PrimaryKeyRelatedField(read_only=True)
+    account_total = serializers.SerializerMethodField()
+
+    def get_account_total(self, instance):
+        total = Ticket.objects.filter(buyer=instance.buyer).values('ticket_for_session__session_price',
+                                                                   'ordered_seats').aggregate(
+            total_sum=Sum(ExpressionWrapper(F('ticket_for_session__session_price') * F('ordered_seats'),
+                                            output_field=DecimalField())))
+        return total.get('total_sum')
 
     class Meta:
         model = Ticket
@@ -44,6 +70,7 @@ class TicketSerializer(ModelSerializer):
             'ticket_for_session',
             'ordered_seats',
             'buyer',
+            'account_total',
         ]
 
     def validate_ordered_seats(self, attrs):
