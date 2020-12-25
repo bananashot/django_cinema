@@ -9,7 +9,7 @@ from cinema_app.views import ProductList, Login, Logout, Registration, CreateHal
     OrderTicketView, AdminToolsView, SessionListWithoutTicketsView, EditSessionView
 
 router = DefaultRouter()
-router.register(r'users', resources.UserViewSet)
+router.register(r'api-registration', resources.UserViewSet)
 router.register(r'halls', resources.HallViewSet)
 router.register(r'films', resources.FilmViewSet)
 router.register(r'sessions', resources.SessionViewSet)
@@ -34,5 +34,4 @@ urlpatterns = [
     path('order_ticket/', OrderTicketView.as_view(), name='order_ticket'),
     path('order_history/', PurchasedTicketsListView.as_view(), name='order_history'),
     path('', include(router.urls)),
-    path('api-token-auth/', views.obtain_auth_token)
 ]

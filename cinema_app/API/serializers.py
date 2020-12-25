@@ -1,19 +1,35 @@
-from django.db.models import Sum, ExpressionWrapper, DecimalField, F
+from datetime import date, timedelta
+
+from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer
 
 from cinema_app.models import CinemaUser, Hall, Film, Session, Ticket
-from cinema_app.schedule_settings import SCHEDULE_SORTING_METHODS
+from cinema_app.schedule_settings import SCHEDULE_SORTING_METHODS, ALLOWED_DAYS_BEFORE_EDITING
 
 
 class UserSerializer(ModelSerializer):
+    password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
+    password2 = serializers.CharField(write_only=True, required=True)
+
     class Meta:
         model = CinemaUser
         fields = [
             'username',
             'first_name',
             'last_name',
+            'email',
+            'password',
+            'password2',
         ]
+
+    def validate(self, attrs):
+        add_attrs = super().validate(attrs)
+        if attrs['password'] != attrs['password2']:
+            raise serializers.ValidationError(
+                {"password": "Passwords are not equal."})
+
+        return add_attrs
 
 
 class HallSerializer(ModelSerializer):
@@ -69,6 +85,63 @@ class SessionSerializer(ModelSerializer):
             'available_tickets',
             'sorting_methods',
         ]
+
+
+class SessionCreateSerializer(ModelSerializer):
+    start_date = serializers.DateField(required=True)
+    end_date = serializers.DateField(required=True)
+    start_time = serializers.TimeField(required=True, format='%h:%m')
+
+    class Meta:
+        model = Session
+        fields = [
+            'film',
+            'hall',
+            'session_price',
+            'start_date',
+            'end_date',
+            'start_time',
+        ]
+
+    def validate_start_date(self, start_date):
+        edit = (date.today() + timedelta(days=ALLOWED_DAYS_BEFORE_EDITING))
+        if start_date < edit:
+            msg = 'You can create or edit sessions only {} day(s) beforehand'.format(ALLOWED_DAYS_BEFORE_EDITING)
+            raise serializers.ValidationError(msg)
+        return start_date
+
+    def validate(self, attrs):
+        add_attrs = super().validate()
+        start_date = attrs['start_date']
+        end_date = attrs['end_date']
+
+        if end_date < start_date:
+            msg = 'Session end date should be the same as a start date or later'
+            raise serializers.ValidationError({"end_date": msg})
+
+        return add_attrs
+
+
+class SessionEditSerializer(ModelSerializer):
+    start_date = serializers.DateField(required=True)
+    start_time = serializers.TimeField(required=True, format='%h:%m')
+
+    class Meta:
+        model = Session
+        fields = [
+            'film',
+            'hall',
+            'session_price',
+            'start_date',
+            'start_time',
+        ]
+
+    def validate_start_date(self, start_date):
+        edit = (date.today() + timedelta(days=ALLOWED_DAYS_BEFORE_EDITING))
+        if start_date < edit:
+            msg = 'You can create or edit sessions only {} day(s) beforehand'.format(ALLOWED_DAYS_BEFORE_EDITING)
+            raise serializers.ValidationError(msg)
+        return start_date
 
 
 class TicketSerializer(ModelSerializer):
